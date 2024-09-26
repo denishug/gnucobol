@@ -1,4 +1,11 @@
 
+2024-25-09  Denis Hugonnard-Roche <dhugonnard@yahoo.fr>
+
+	* intrinsic.c: recode cob_decimal_pow function
+	  in order to fix #924,#925 and #989
+	  fix macos compile error
+	* run_fundamental.at: add all the tests case for power function
+
 2024-09-09  Simon Sobisch <simonsobisch@gnu.org>
 
 	* README: add documentation for "make checkmanual"

@@ -1,4 +1,8 @@
 
+2024-09-25  Denis Hugonnard-Roce <dhugonnard@yahoo.fr>
+
+	* intrinsic.c (cob_decimal_pow) fixed Bug #925,#925,#989
+
 2024-09-20  Chuck Haatvedt <chuck.haatvedt+cobol@gmail.com>
 
 	* screenio.c (cob_screen_get_all) fixed Bug #990

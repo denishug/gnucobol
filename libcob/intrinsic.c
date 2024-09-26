@@ -3157,6 +3157,7 @@ cob_decimal_pow (cob_decimal *pd1, cob_decimal *pd2)
 	int sign_nbr;
 	int sign_exp;
 	int power_case;
+	int negat_result = 0 ;
 
 	if (unlikely(pd1->scale == COB_DECIMAL_NAN)) {
 		return;
@@ -3194,7 +3195,6 @@ cob_decimal_pow (cob_decimal *pd1, cob_decimal *pd2)
 	}
 
  Compute_Power:
-	int negat_result = 0 ;
 
 	cob_decimal_get_mpf (cob_mpft , pd1);
 
