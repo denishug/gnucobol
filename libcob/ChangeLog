@@ -1,4 +1,9 @@
 
+2024-09-26  Denis Hugonnard-Roce <dhugonnard@yahoo.fr>
+
+	* intrinsic.c (cob_decimal_pow) Correct c++ comment style to C
+	comment style
+
 2024-09-25  Denis Hugonnard-Roce <dhugonnard@yahoo.fr>
 
 	* intrinsic.c (cob_decimal_pow) fixed Bug #925,#925,#989

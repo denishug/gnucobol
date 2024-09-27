@@ -3314,7 +3314,7 @@ cob_decimal_pow (cob_decimal *pd1, cob_decimal *pd2)
 
 		}
 		else {
-			// FIX #924
+			/* FIX #924 */
 			pd1->scale = COB_DECIMAL_NAN;
 			cob_set_exception(COB_EC_SIZE_EXPONENTIATION);
 		}
