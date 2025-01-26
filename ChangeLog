@@ -1,4 +1,8 @@
 
+2025-26-01  Denis Hugonnard-Roche <dhugonnard@yahoo.fr>
+
+	* intrinsic.c: Correct #1020 ticket
+
 2024-26-09  Denis Hugonnard-Roche <dhugonnard@yahoo.fr>
 
 	* intrinsic.c: Correct C++ comment style to C style

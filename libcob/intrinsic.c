@@ -3154,9 +3154,6 @@ cob_switch_value (const int id)
 void
 cob_decimal_pow (cob_decimal *pd1, cob_decimal *pd2)
 {
-	int sign_nbr;
-	int sign_exp;
-	int power_case;
 	int negat_result = 0 ;
 
 	if (unlikely(pd1->scale == COB_DECIMAL_NAN)) {
@@ -3167,94 +3164,111 @@ cob_decimal_pow (cob_decimal *pd1, cob_decimal *pd2)
 		return;
 	}
 
-	sign_nbr = mpz_sgn(pd1->value);
-	sign_exp = mpz_sgn(pd2->value);
+	cob_trim_decimal (pd2);
+	cob_trim_decimal (pd1);
 
-	power_case = sign_nbr * sign_exp;
+	const int sign_nbr = mpz_sgn (pd1->value);
+	const int sign_exp = mpz_sgn (pd2->value);
+	const int power_case = sign_nbr * sign_exp;
 
-	cob_trim_decimal(pd2);
-	cob_trim_decimal(pd1);
 
-	switch (power_case) {
-	
-	case  1:
-	case -1:
-		if (pd2->scale != 0 && sign_nbr == -1) {
-			/* Case number < 0 and decimal exponent --> Error */
-			pd1->scale = COB_DECIMAL_NAN;
-			cob_set_exception(COB_EC_SIZE_EXPONENTIATION);
-			return;
+	if (!power_case) {
+		/* Exponent OR Number are  = 0 */
+		if (sign_nbr == 0) {
+			if ( sign_exp == 1) {
+				/* case 0 ^ Positive number --> zero   */
+				mpz_set_ui (pd1->value, 0UL);
+				pd1->scale = 0;
+
+			}
+			else {
+				/* FIX #924 : 0 raised to negative number or 0 */
+				pd1->scale = COB_DECIMAL_NAN;
+				cob_set_exception (COB_EC_SIZE_EXPONENTIATION);
+			}
 		}
-		goto Compute_Power;
+		else {
+			/* Exponent is 0 and Nbr != 0 ---> 1 */
+			mpz_set_ui (pd1->value, 1UL);
+			pd1->scale = 0;
+		}
 
-		break;
-
-	case 0:
-		goto Process_case_0;
-		break;
+		return;
 	}
-
- Compute_Power:
-
-	cob_decimal_get_mpf (cob_mpft , pd1);
+	
+	if (pd2->scale != 0 && sign_nbr == -1) {
+		/* Case number < 0 and decimal exponent --> Error */
+		pd1->scale = COB_DECIMAL_NAN;
+		cob_set_exception (COB_EC_SIZE_EXPONENTIATION);
+		return;
+	}
 
 	/* First Check result size */	
 	/* Fix  #925 : Avoid GMPLIB CRASH */
+	
+	cob_decimal_get_mpf (cob_mpft , pd1);
 
-	mpf_set(cob_mpft3,cob_mpft) ;
-	if ( sign_nbr == -1) {
-		mpf_abs(cob_mpft3, cob_mpft3) ;
+
+	mpf_set (cob_mpft3,cob_mpft) ;
+	if (sign_nbr == -1) {
+		mpf_abs (cob_mpft3, cob_mpft3) ;
 	}
-	cob_mpf_log10(cob_mpft3, cob_mpft3) ;
+	cob_mpf_log10 (cob_mpft3, cob_mpft3) ;
 
 	cob_decimal_get_mpf (cob_mpft2, pd2) ;
-	mpf_mul(cob_mpft3, cob_mpft3, cob_mpft2) ;
-	mpf_abs(cob_mpft3, cob_mpft3) ;
+	mpf_mul (cob_mpft3, cob_mpft3, cob_mpft2) ;
+	mpf_abs (cob_mpft3, cob_mpft3) ;
 
-	if ( ! ( mpf_cmp_ui(cob_mpft3,COB_MAX_INTERMEDIATE_FLOATING_SIZE + 1 ) < 0 ) ) {
+	if ( ! (mpf_cmp_ui (cob_mpft3,COB_MAX_INTERMEDIATE_FLOATING_SIZE + 1) < 0) ) {
 		pd1->scale = COB_DECIMAL_NAN;
-		cob_set_exception(COB_EC_SIZE_EXPONENTIATION);
+		cob_set_exception (COB_EC_SIZE_EXPONENTIATION);
 
 		return ;
 	}
 
 	/*         End Check          */
 	
-	if ( ! (pd2->scale)) {
+	if (!(pd2->scale)) {
+		/* Integer Power */
 
 		cob_uli_t n ; 
 		
-		/* Integer Power */
-		if (!mpz_cmp_ui(pd2->value, 1UL)) {
+		if (!mpz_cmp_ui (pd2->value, 1UL)) {
 			/* Power is 1 leave as is */
 			return;
 		}
 		
-		if (mpz_sgn (pd2->value) == -1 ) {
+		if (sign_exp == -1) {
 			/* Negative power */
-            		mpz_abs (pd2->value, pd2->value); /* to be corrected */
+            		mpz_abs (pd2->value, pd2->value); 
 
-			mpf_ui_div(cob_mpft, 1UL, cob_mpft) ;
+			mpf_ui_div (cob_mpft, 1UL, cob_mpft) ;
 		}
                 
-        	if (mpz_fits_ulong_p (pd2->value)) {
+		if (mpz_fits_ulong_p (pd2->value)) {
 			/* Positive power */
-            		n = mpz_get_ui (pd2->value);
+			n = mpz_get_ui (pd2->value);
 
-            		mpf_pow_ui (cob_mpft, cob_mpft, n);
+			mpf_pow_ui (cob_mpft, cob_mpft, n);
 
-			cob_decimal_set_mpf(pd1, cob_mpft);
+			cob_decimal_set_mpf (pd1, cob_mpft);
 
-			cob_trim_decimal(pd1);
+			cob_trim_decimal (pd1);
 	
+			if (sign_exp == -1) {
+				/* Keep exponent value unchanged --> FIX #1020 */
+				mpz_mul_si (pd2->value, pd2->value, -1L) ;	
+			}			
+
 			return;		 
-        	}
+		}
 
 		/* 
 		 *  At this point we know that :
 		 *
-		 *  	1) the result will not crash gmp 
-		 *  	2) the absolute value of exponent is too large 
+		 *  	1) the result will not crash gmp
+		 *      2) Exponent is integer 
+		 *  	3) the absolute value of exponent is too large 
 		 *  	to fits ulong
 		 *  	--> Compute the result sign and Fallthrough to Taylor series compute          
 		 *
@@ -3262,11 +3276,10 @@ cob_decimal_pow (cob_decimal *pd1, cob_decimal *pd2)
 
  		if (sign_nbr == -1) {
 			/* Fix  #989               */
-			if (mpz_odd_p(pd2->value)) {
+			if (mpz_odd_p (pd2->value)) {
 				negat_result = 1;
 			}
-
-    		}
+		}
 	}
 	
 	/* 
@@ -3278,54 +3291,33 @@ cob_decimal_pow (cob_decimal *pd1, cob_decimal *pd2)
         */
     
 	/* Compute a ^ b */
-	mpz_abs(pd1->value, pd1->value);
-	mpz_abs(pd2->value, pd2->value);
+	mpz_abs (pd1->value, pd1->value);
+	mpz_abs (pd2->value, pd2->value);
 
-	cob_decimal_get_mpf(cob_mpft, pd1);
-	cob_decimal_get_mpf(cob_mpft2, pd2);
+	cob_decimal_get_mpf (cob_mpft, pd1);
+	cob_decimal_get_mpf (cob_mpft2, pd2);
 
-	cob_mpf_log(cob_mpft, cob_mpft);
-	mpf_mul(cob_mpft, cob_mpft, cob_mpft2);
+	cob_mpf_log (cob_mpft, cob_mpft);
+	mpf_mul (cob_mpft, cob_mpft, cob_mpft2);
 
-	cob_mpf_exp(cob_mpft2, cob_mpft);
+	cob_mpf_exp (cob_mpft2, cob_mpft);
 
 	/* if negative exponent compute 1 / (a^b) */
 	if (sign_exp == -1) {
-		mpf_set_ui(cob_mpft, 1UL);
-		mpf_div(cob_mpft2, cob_mpft, cob_mpft2);
+		mpf_set_ui (cob_mpft, 1UL);
+		mpf_div (cob_mpft2, cob_mpft, cob_mpft2);
+		/* Keep exponent value unchanged --> FIX #1020 */
+		mpz_mul_si (pd2->value, pd2->value, -1L) ;	
 	}
 
-	cob_decimal_set_mpf(pd1, cob_mpft2);
+	cob_decimal_set_mpf (pd1, cob_mpft2);
 
 	if (negat_result) {
-		mpz_neg(pd1->value, pd1->value);
+		mpz_neg (pd1->value, pd1->value);
 	}
 
-	cob_trim_decimal(pd1);
+	cob_trim_decimal (pd1);
 
-	return;
-
- Process_case_0:
-	if (sign_nbr == 0) {
-		if ( sign_exp == 1) {
-			/* case 0 ^ Positive number --> zero   */
-			mpz_set_ui(pd1->value, 0UL);
-			pd1->scale = 0;
-
-		}
-		else {
-			/* FIX #924 */
-			pd1->scale = COB_DECIMAL_NAN;
-			cob_set_exception(COB_EC_SIZE_EXPONENTIATION);
-		}
-	}
-	else {
-		/* Exponent is zero  ---> 1 */
-		mpz_set_ui(pd1->value, 1UL);
-		pd1->scale = 0;
-	}
-
-	return;
 }
 
 /* Indirect field get/put functions */

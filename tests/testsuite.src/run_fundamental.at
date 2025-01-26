@@ -11195,8 +11195,8 @@ AT_CHECK([$COBCRUN_DIRECT ./prog], [0], [], [])
 AT_CLEANUP
 
 
-AT_SETUP([Power exception case])
-AT_KEYWORDS([POWER])
+AT_SETUP([COMPUTE Power exception case])
+AT_KEYWORDS([COMPUTE POWER])
 
 AT_DATA([prog.cob], [
        IDENTIFICATION DIVISION.
@@ -11354,8 +11354,8 @@ AT_CHECK([$COBCRUN_DIRECT ./prog], [0], [], [])
 AT_CLEANUP
 
 
-AT_SETUP([Power a^b with a > 0])
-AT_KEYWORDS([POWER])
+AT_SETUP([Compute Power a^b with a > 0])
+AT_KEYWORDS([COMPUTE POWER])
 
 AT_DATA([prog.cob], [
        IDENTIFICATION DIVISION.
@@ -11693,8 +11693,9 @@ AT_CHECK([$COBCRUN_DIRECT ./prog], [0], [], [])
 
 AT_CLEANUP
 
-AT_SETUP([Power a^b with a < 0])
-AT_KEYWORDS([POWER])
+
+AT_SETUP([COMPUTE Power a^b with a < 0])
+AT_KEYWORDS([COMPUTE POWER])
 
 AT_DATA([prog.cob], [
        IDENTIFICATION DIVISION.
@@ -11888,8 +11889,11 @@ AT_CHECK([$COMPILE prog.cob], [0], [], [])
 AT_CHECK([$COBCRUN_DIRECT ./prog], [0], [], [])
 
 AT_CLEANUP
-AT_SETUP([Power size error and limits cases])
-AT_KEYWORDS([POWER])
+
+
+AT_SETUP([COMPUTE Power size error and limits cases])
+AT_KEYWORDS([COMPUTE POWER])
+
 AT_DATA([prog.cob], [
        IDENTIFICATION DIVISION.
        PROGRAM-ID . power .
@@ -12092,12 +12096,16 @@ AT_DATA([prog.cob], [
       *> 
            STOP RUN .
 ])
+
 AT_CHECK([$COMPILE prog.cob], [0], [], [])
 AT_CHECK([$COBCRUN_DIRECT ./prog], [0], [], [])
+
 AT_CLEANUP
 
-AT_SETUP([Power size error and limits cases 2])
-AT_KEYWORDS([POWER])
+
+AT_SETUP([COMPUTE Power size error and limits cases 2])
+AT_KEYWORDS([COMPUTE POWER])
+
 AT_DATA([prog.cob], [ 
        IDENTIFICATION DIVISION.
        PROGRAM-ID . tstpow  .
@@ -12189,7 +12197,67 @@ AT_DATA([prog.cob], [
            GOBACK .
       *>
 ])
+
 AT_CHECK([$COMPILE prog.cob], [0], [], [])
 AT_CHECK([$COBCRUN_DIRECT ./prog], [0], [], [])
+
+AT_CLEANUP
+
+
+AT_SETUP([Compute Power with constant])
+AT_KEYWORDS([COMPUTE POWER])
+
+AT_DATA([prog.cob], [ 
+       PROGRAM-ID. testpower.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+           01 AAA PIC -9999.9999.
+       PROCEDURE DIVISION.
+           COMPUTE AAA = 2 ** 3
+           ON SIZE ERROR
+              DISPLAY '1: 2 ** 3 SHOULD NOT SIZE ERROR'
+           NOT ON SIZE ERROR 
+               IF AAA NOT = ' 0008.0000'
+               THEN
+                   DISPLAY '1: <' AAA '> != 8'                     
+               END-IF 
+           END-COMPUTE
+      *
+           compute AAA = -2 ** 3
+           on size error
+              display '2: -2 ** 3 should not size error'
+           not on size error 
+               if AAA NOT = '-0008.0000'
+               then
+                   display '2: <' AAA '> != -8'                     
+               end-if 
+           end-compute
+      *
+           compute AAA = 2 ** -3
+           on size error
+              display '3: 2 ** -3 should not size error'
+           not on size error 
+               if AAA NOT = ' 0000.1250'
+               then
+                   display '3: <' AAA '> != 0.125'                     
+               end-if 
+           end-compute
+      *
+           compute AAA = -2 ** -3
+           on size error
+              display '4: -2 ** -3 should not size error'
+           not on size error 
+               if AAA NOT = '-0000.1250'
+               then
+                   display '4: <' AAA '> != -0.125'                     
+               end-if 
+           end-compute
+      *
+           goback .
+])
+
+AT_CHECK([$COMPILE prog.cob], [0], [], [])
+AT_CHECK([$COBCRUN_DIRECT ./prog], [0], [], [])
+
 AT_CLEANUP
 
